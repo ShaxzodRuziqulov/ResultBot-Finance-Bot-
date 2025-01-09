@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/result_bot
+    username: postgres
+    password: 123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: janobprizident@gmail.com
+    password: ecgyiraunmdyakcg
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+security:
+  jwt:
+    secret-key: ymanDxgNwmCoYxrg7SWawCN8hbyBWz/ZSalfMmhJspk=
+    expiration-time: 2628000000
+    refresh-expiration-time: 864000000
