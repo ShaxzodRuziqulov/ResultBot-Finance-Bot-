@@ -1,15 +1,24 @@
 package com.example.resultbot.service.dto;
 
 public class RegisterUserDto {
+    private String firstName;
+    private String lastName;
+    private Long chatId;
     private String email;
 
     private String password;
 
-    private String fullName;
-
     private String userName;
 
     private Long roleId;
+
+    public RegisterUserDto(String email) {
+
+    }
+
+    public RegisterUserDto() {
+
+    }
 
     public String getEmail() {
         return email;
@@ -27,14 +36,6 @@ public class RegisterUserDto {
         this.password = password;
     }
 
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
     public String getUserName() {
         return userName;
     }
@@ -49,6 +50,30 @@ public class RegisterUserDto {
 
     public void setRoleId(Long roleId) {
         this.roleId = roleId;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public Long getChatId() {
+        return chatId;
+    }
+
+    public void setChatId(Long chatId) {
+        this.chatId = chatId;
     }
 }
 

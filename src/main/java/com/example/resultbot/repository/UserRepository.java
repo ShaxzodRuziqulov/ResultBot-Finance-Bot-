@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -18,4 +20,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     User findByVerificationCode(@Param("code") String code);
 
+    List<User> findAllByStatus(Status status);
+
+    Optional<User> findByPassword(String password);
+
+    Optional<User> findByChatId(Long chatId);
 }

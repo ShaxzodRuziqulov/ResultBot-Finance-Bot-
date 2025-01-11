@@ -19,9 +19,9 @@ public class User extends BaseEntity implements UserDetails, Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String fullName;
-
+    private Long chatId;
+    private String firstName;
+    private String lastName;
     @Column(name = "user_name")
     private String userName;
 
@@ -80,13 +80,14 @@ public class User extends BaseEntity implements UserDetails, Serializable {
         this.id = id;
     }
 
-    public String getFullName() {
-        return fullName;
+    public Long getChatId() {
+        return chatId;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setChatId(Long chatId) {
+        this.chatId = chatId;
     }
+
 
     public String getUserName() {
         return userName;
@@ -130,5 +131,21 @@ public class User extends BaseEntity implements UserDetails, Serializable {
 
     public void setVerificationCode(String verificationCode) {
         this.verificationCode = verificationCode;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 }

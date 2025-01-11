@@ -5,10 +5,9 @@ import com.example.resultbot.entity.enumirated.Status;
 import com.example.resultbot.repository.UserRepository;
 import com.example.resultbot.service.dto.UserDto;
 import com.example.resultbot.service.mapper.UserMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +23,7 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
+    @Transactional
     public UserDto create(UserDto userDto) {
         User user = userMapper.toEntity(userDto);
         if (userDto.getStatus() == null) {
@@ -47,14 +47,28 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserDto> findAllActiveUsers() {
+        return userRepository
+                .findAllByStatus(Status.ACTIVE)
+                .stream()
+                .map(userMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public User findById(Long id) {
         return userRepository
                 .findById(id)
-                .orElseGet(User::new);
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
     }
 
+
     public User delete(Long id) {
-        return userRepository.updateStatus(id, Status.DELETE);
+        userRepository.updateStatus(id, Status.DELETE);
+        return findById(id);
+    }
+
+    public boolean isUserRegistered(Long chatId) {
+        return userRepository.findByChatId(chatId).isEmpty();
     }
 
 

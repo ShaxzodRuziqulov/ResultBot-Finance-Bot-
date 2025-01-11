@@ -1,6 +1,5 @@
 server:
   port: 8080
-
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/result_bot
@@ -28,3 +27,9 @@ security:
     secret-key: ymanDxgNwmCoYxrg7SWawCN8hbyBWz/ZSalfMmhJspk=
     expiration-time: 2628000000
     refresh-expiration-time: 864000000
+telegram:
+  bot:
+    username: result_finance_bot
+    token: 7902141440:AAGvYkmtNlFozsZCbGO8m3ER70RIVl2Jyog
+    webhook-path: https://bd9d-91-90-219-96.ngrok-free.app/telegram/webhook
+

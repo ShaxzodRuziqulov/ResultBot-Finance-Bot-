@@ -1,6 +1,7 @@
 package com.example.resultbot.web.rest;
 
 import com.example.resultbot.entity.User;
+import com.example.resultbot.entity.enumirated.Status;
 import com.example.resultbot.repository.UserRepository;
 import com.example.resultbot.security.JwtService;
 import com.example.resultbot.service.AuthenticationService;
@@ -42,6 +43,7 @@ public class AuthenticationResource {
         }
 
         user.setVerificationCode(null);
+        user.setStatus(Status.ACTIVE);
         userRepository.save(user);
 
         return ResponseEntity.ok("User verified successfully.");

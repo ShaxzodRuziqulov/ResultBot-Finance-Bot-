@@ -43,9 +43,11 @@ public class AuthenticationService {
 
 
     public UserDto signup(RegisterUserDto input) {
+
         User user = userMapper.toUser(input);
         user.setPassword(passwordEncoder.encode(input.getPassword()));
         user.setStatus(Status.PENDING);
+
         if (input.getRoleId() == null) {
             user.setRole(roleRepository.findByName("ROLE_USER"));
         }
@@ -53,7 +55,6 @@ public class AuthenticationService {
         user.setVerificationCode(verificationCode);
 
         userRepository.save(user);
-
         sendVerificationEmail(user.getEmail(), verificationCode);
 
         return userMapper.toDto(user);
@@ -68,18 +69,20 @@ public class AuthenticationService {
         String body = "Your verification code is: " + verificationCode;
         emailService.sendEmail(email, subject, body);
     }
+    public boolean verifyCode(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Foydalanuvchi topilmadi: " + email));
 
-    //    public User authenticate(LoginUserDto input) {
-//        authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(
-//                        input.getEmail(),
-//                        input.getPassword()
-//                )
-//        );
-//
-//        return userRepository.findByEmail(input.getEmail())
-//                .orElseThrow();
-//    }
+        if (user.getVerificationCode().equals(code)) {
+            user.setStatus(Status.ACTIVE);
+            user.setVerificationCode(null);
+            userRepository.save(user);
+            return true;
+        } else {
+            throw new IllegalArgumentException("Tasdiqlash kodi noto‘g‘ri.");
+        }
+    }
+
     public User authenticate(LoginUserDto input) {
         if (input.getEmail() == null || input.getEmail().isEmpty()) {
             throw new IllegalArgumentException("Email kiritilishi shart");

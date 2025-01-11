@@ -6,7 +6,9 @@ import java.time.LocalDateTime;
 public class UserDto {
 
     private Long id;
-    private String fullName;
+    private Long chatId;
+    private String firstName;
+    private String lastName;
     private String userName;
     private String email;
     private String password;
@@ -23,13 +25,30 @@ public class UserDto {
         this.id = id;
     }
 
-    public String getFullName() {
-        return fullName;
+    public Long getChatId() {
+        return chatId;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setChatId(Long chatId) {
+        this.chatId = chatId;
     }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
 
     public String getUserName() {
         return userName;
