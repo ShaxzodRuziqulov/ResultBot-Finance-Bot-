@@ -10,18 +10,46 @@ import java.util.List;
 
 @Service
 public class InlineKeyboardMarkupService {
-    public InlineKeyboardMarkup createReportTypesKeyboard() {
-        InlineKeyboardButton incomeButton = new InlineKeyboardButton("📈 Oylik daromadlar");
-        incomeButton.setCallbackData("REPORT_MONTHLY_INCOME");
+    public InlineKeyboardMarkup createReportsMenu() {
+        InlineKeyboardButton monthlyIncomeButton = new InlineKeyboardButton("Oylik daromadlar");
+        monthlyIncomeButton.setCallbackData("reports_monthly_income");
 
-        InlineKeyboardButton expenseButton = new InlineKeyboardButton("📉 Oylik xarajatlar");
-        expenseButton.setCallbackData("REPORT_MONTHLY_EXPENSES");
+        InlineKeyboardButton monthlyExpenseButton = new InlineKeyboardButton("Oylik xarajatlar");
+        monthlyExpenseButton.setCallbackData("reports_monthly_expense");
 
-        InlineKeyboardButton customReportButton = new InlineKeyboardButton("📊 Qo‘shimcha hisobotlar");
-        customReportButton.setCallbackData("REPORT_CUSTOM");
+        InlineKeyboardButton additionalReportsButton = new InlineKeyboardButton("Qo‘shimcha hisobotlar");
+        additionalReportsButton.setCallbackData("reports_additional");
 
-        return getInlineKeyboardMarkup(incomeButton, expenseButton, customReportButton);
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(monthlyIncomeButton, monthlyExpenseButton));
+        rows.add(List.of(additionalReportsButton));
+
+        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
+        inlineKeyboard.setKeyboard(rows);
+
+        return inlineKeyboard;
     }
+    public InlineKeyboardMarkup createSettingsMenu() {
+        InlineKeyboardButton editProfileButton = new InlineKeyboardButton("Profil ma’lumotlarini o‘zgartirish");
+        editProfileButton.setCallbackData("settings_edit_profile");
+
+        InlineKeyboardButton viewAccessRightsButton = new InlineKeyboardButton("Joriy kirish huquqlarini ko‘rish");
+        viewAccessRightsButton.setCallbackData("settings_view_access");
+
+        InlineKeyboardButton changePasswordButton = new InlineKeyboardButton("Parolni o‘zgartirish");
+        changePasswordButton.setCallbackData("settings_change_password");
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(editProfileButton));
+        rows.add(List.of(viewAccessRightsButton));
+        rows.add(List.of(changePasswordButton));
+
+        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
+        inlineKeyboard.setKeyboard(rows);
+
+        return inlineKeyboard;
+    }
+
 
 
 

@@ -31,5 +31,4 @@ telegram:
   bot:
     username: result_finance_bot
     token: 7902141440:AAGvYkmtNlFozsZCbGO8m3ER70RIVl2Jyog
-    webhook-path: https://bd9d-91-90-219-96.ngrok-free.app/telegram/webhook
-
+    webhook-path: https://13d4-91-90-219-96.ngrok-free.app/telegram/webhook

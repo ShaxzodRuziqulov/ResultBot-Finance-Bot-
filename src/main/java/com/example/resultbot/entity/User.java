@@ -19,22 +19,33 @@ public class User extends BaseEntity implements UserDetails, Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "chat_id", nullable = false, unique = true)
     private Long chatId;
+
+    @Column(name = "first_name", nullable = false)
     private String firstName;
+
+    @Column(name = "last_name", nullable = false)
     private String lastName;
-    @Column(name = "user_name")
+
+    @Column(name = "user_name", nullable = false, unique = true)
     private String userName;
 
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
+    @Column(name = "password", nullable = false)
     private String password;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "role_id")
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     private Status status;
+
 
     private String verificationCode;
 

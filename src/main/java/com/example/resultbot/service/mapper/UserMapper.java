@@ -15,5 +15,6 @@ public interface UserMapper extends EntityMapper<UserDto, User> {
     UserDto toDto(User user);
 
     @Mapping(source = "roleId", target = "role.id")
+    @Mapping(target = "email", source = "email")
     User toUser(RegisterUserDto input);
 }

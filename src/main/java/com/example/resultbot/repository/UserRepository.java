@@ -22,7 +22,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findAllByStatus(Status status);
 
-    Optional<User> findByPassword(String password);
 
-    Optional<User> findByChatId(Long chatId);
+    @Query("SELECT u FROM User u WHERE u.chatId = :chatId")
+    Optional<User> findByChatId(@Param("chatId") Long chatId);
+
+
+    boolean existsByEmail(String email);
 }

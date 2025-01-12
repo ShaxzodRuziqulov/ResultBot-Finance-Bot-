@@ -13,7 +13,7 @@ public class RegisterUserDto {
     private Long roleId;
 
     public RegisterUserDto(String email) {
-
+        this.email = email;
     }
 
     public RegisterUserDto() {

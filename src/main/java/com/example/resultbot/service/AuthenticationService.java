@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -43,7 +44,14 @@ public class AuthenticationService {
 
 
     public UserDto signup(RegisterUserDto input) {
+        if (input.getEmail() == null || input.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Email bo‘sh bo‘lmasligi kerak.");
+        }
 
+        Optional<User> existingUser = userRepository.findByChatId(input.getChatId());
+        if (existingUser.isPresent()) {
+            throw new IllegalStateException("Foydalanuvchi allaqachon ro‘yxatdan o‘tgan.");
+        }
         User user = userMapper.toUser(input);
         user.setPassword(passwordEncoder.encode(input.getPassword()));
         user.setStatus(Status.PENDING);
@@ -69,6 +77,7 @@ public class AuthenticationService {
         String body = "Your verification code is: " + verificationCode;
         emailService.sendEmail(email, subject, body);
     }
+
     public boolean verifyCode(String email, String code) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Foydalanuvchi topilmadi: " + email));
