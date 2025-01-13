@@ -42,18 +42,16 @@ public class ReportService {
 
             List<Transaction> transactions = transactionService.fetchMonthlyTransactions(currentMonth, currentYear);
 
-            // Ma'lumotlar qatorlari
             int rowNum = 1;
             for (Transaction transaction : transactions) {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(transaction.getId());
-                row.createCell(1).setCellValue(transaction.getClient().getFullName()); // Mijoz ismi
+                row.createCell(1).setCellValue(transaction.getClient().getFullName());
                 row.createCell(2).setCellValue(transaction.getAmount());
                 row.createCell(3).setCellValue(transaction.getCurrency().toString());
 
             }
 
-            // Faylni saqlash
             try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
                 workbook.write(fileOut);
             }
