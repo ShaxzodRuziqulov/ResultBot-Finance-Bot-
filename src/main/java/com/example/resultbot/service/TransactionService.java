@@ -50,4 +50,8 @@ public class TransactionService {
     public Transaction delete(Long id) {
         return transactionRepository.updateStatus(id, Status.DELETE);
     }
+
+    public List<Transaction> fetchMonthlyTransactions(int currentMonth, int currentYear) {
+        return transactionRepository.findMonthlyTransactions(currentMonth, currentYear);
+    }
 }

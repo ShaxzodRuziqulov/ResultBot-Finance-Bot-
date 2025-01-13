@@ -29,6 +29,7 @@ public class InlineKeyboardMarkupService {
 
         return inlineKeyboard;
     }
+
     public InlineKeyboardMarkup createSettingsMenu() {
         InlineKeyboardButton editProfileButton = new InlineKeyboardButton("Profil ma’lumotlarini o‘zgartirish");
         editProfileButton.setCallbackData("settings_edit_profile");
@@ -51,8 +52,6 @@ public class InlineKeyboardMarkupService {
     }
 
 
-
-
     public InlineKeyboardMarkup createFilterKeyboard() {
         InlineKeyboardButton dateFilter = new InlineKeyboardButton("📅 Davr bo‘yicha");
         dateFilter.setCallbackData("FILTER_DATE");
@@ -62,9 +61,11 @@ public class InlineKeyboardMarkupService {
 
         InlineKeyboardButton customerFilter = new InlineKeyboardButton("👤 Mijoz bo‘yicha");
         customerFilter.setCallbackData("FILTER_CUSTOMER");
-
+        InlineKeyboardButton periodFilter = new InlineKeyboardButton("Xizmat bo‘yicha");
+        periodFilter.setCallbackData("FILTER_BY_SERVICE");
         return getInlineKeyboardMarkup(dateFilter, categoryFilter, customerFilter);
     }
+
     private InlineKeyboardMarkup getInlineKeyboardMarkup(
             InlineKeyboardButton incomeButton,
             InlineKeyboardButton expenseButton,
@@ -79,5 +80,6 @@ public class InlineKeyboardMarkupService {
 
         return keyboardMarkup;
     }
+
 
 }

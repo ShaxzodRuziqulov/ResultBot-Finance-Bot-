@@ -32,7 +32,7 @@ public class TelegramMessageHandler {
     }
 
     public SendMessage handleStartCommand(Long chatId) throws TelegramApiException {
-        if (!userService.isUserRegistered(chatId)) {
+        if (userService.isUserRegistered(chatId)) {
             return sendMessageWithKeyboard(chatId, messageFormatterService.formatWelcomeBackMessage(), keyboardMarkupService.createMainMenu());
         } else {
             return sendMessage(chatId, messageFormatterService.formatNewUserMessage());
@@ -51,7 +51,13 @@ public class TelegramMessageHandler {
         return sendMessageWithKeyboard(chatId, message, settingsMenu);
     }
 
-    private SendMessage sendMessage(Long chatId, String text) throws TelegramApiException {
+    public SendMessage createFilterKeyboard(Long chatId) throws TelegramApiException {
+        String text = " ";
+        InlineKeyboardMarkup filter = inlineKeyboardMarkupService.createFilterKeyboard();
+        return sendMessageWithKeyboard(chatId, text, filter);
+    }
+
+    private SendMessage sendMessage(Long chatId, String text) {
         return telegramBotProvider.sendMessageExecute(chatId, text);
     }
 

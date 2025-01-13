@@ -1,6 +1,7 @@
 package com.example.resultbot.service.botservice;
 
 import com.example.resultbot.entity.User;
+import com.example.resultbot.entity.enumirated.CallbackActions;
 import com.example.resultbot.entity.enumirated.State;
 import com.example.resultbot.entity.enumirated.Status;
 import com.example.resultbot.repository.UserRepository;
@@ -11,17 +12,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.starter.SpringWebhookBot;
 
+import java.io.File;
 import java.util.*;
 
 @Service
@@ -29,6 +32,7 @@ public class TelegramService extends SpringWebhookBot {
     private static final Logger log = LoggerFactory.getLogger(TelegramService.class);
     private final Map<Long, State> userStates = new HashMap<>();
     private final Map<Long, RegisterUserDto> userInputs = new HashMap<>();
+    private final ReportService reportService;
     private final UserService userService;
     private final AuthenticationService authenticationService;
     private final UserRepository userRepository;
@@ -46,12 +50,14 @@ public class TelegramService extends SpringWebhookBot {
     private String webhookPath;
 
     public TelegramService(
-            UserService userService,
+            ReportService reportService, UserService userService,
             AuthenticationService authenticationService,
             UserRepository userRepository,
             MessageFormatterService messageFormatterService,
-            TelegramMessageHandler telegramMessageHandler, TelegramBotProvider telegramBotProvider) {
+            TelegramMessageHandler telegramMessageHandler,
+            TelegramBotProvider telegramBotProvider) {
         super(new SetWebhook());
+        this.reportService = reportService;
         this.userService = userService;
         this.authenticationService = authenticationService;
         this.userRepository = userRepository;
@@ -110,41 +116,116 @@ public class TelegramService extends SpringWebhookBot {
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
 
             try {
-                switch (callbackData) {
-
-                    case "reports_monthly_income" -> execute(sendMessage(chatId, "Oylik daromadlar hisoblanmoqda..."));
-                    case "reports_monthly_expense" -> execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
-                    case "reports_additional" ->
-                            execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
-                    case "settings_edit_profile" ->
-                            execute(sendMessage(chatId, "Profil ma’lumotlarini o‘zgartirish..."));
-                    case "settings_view_access" -> execute(sendMessage(chatId, "Joriy kirish huquqlarini ko‘rish..."));
-                    case "settings_change_password" -> execute(sendMessage(chatId, "Parolni o‘zgartirish..."));
-                    default -> {
-                        execute(sendMessage(chatId, "Tanlangan amalni tushunmadim."));
-                        log.info("Kelgan callbackData: {}", callbackData);
-                    }
-                }
+                String responseMessage = handleCallbackQuery(callbackData, chatId,update);
+                execute(sendMessage(chatId, responseMessage));
             } catch (TelegramApiException e) {
                 log.error("Callback query-ni qayta ishlashda xatolik: {}", e.getMessage());
                 e.printStackTrace();
             }
-
-            return null;
         }
+
 
         return null;
     }
 
+    private String handleCallbackQuery(String callbackData, Long chatId,Update update) throws TelegramApiException {
+
+        try {
+            String callbackQueryId = update.getCallbackQuery().getId();
+            System.out.println("CallbackQuery received: " + callbackData);
+
+            if ("stop_recursion".equals(callbackData)) {
+                return null;
+            }
+
+
+            processCallbackQuery(update.getCallbackQuery());
+            answerCallbackQuery(update);
+
+            CallbackActions action = CallbackActions.valueOf(callbackData.toUpperCase());
+
+            switch (action) {
+                case REPORTS_MONTHLY_INCOME -> {
+                    execute(sendMessage(chatId, "Oylik daromadlar hisoblanmoqda..."));
+
+                    String filePath = generateMonthlyIncomeReport();
+
+                    sendExcelReport(chatId, filePath);
+                }
+                case REPORTS_MONTHLY_EXPENSE -> execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
+                case REPORTS_ADDITIONAL -> {
+                    execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
+                    sendAdditionalFilters(chatId);
+                }
+                case SETTINGS_EDIT_PROFILE -> execute(sendMessage(chatId, "Profil ma’lumotlarini o‘zgartirish..."));
+                case SETTINGS_VIEW_ACCESS -> execute(sendMessage(chatId, "Joriy kirish huquqlarini ko‘rish..."));
+                case SETTINGS_CHANGE_PASSWORD -> execute(sendMessage(chatId, "Parolni o‘zgartirish..."));
+                default -> execute(sendMessage(chatId, "Tanlangan amalni tushunmadim."));
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("Noto'g'ri callback ma'lumotlari: {}", callbackData);
+            execute(sendMessage(chatId, "Tanlangan amalni tushunmadim."));
+        } catch (TelegramApiException e) {
+            log.error("Callback query qayta ishlashda xatolik: {}", e.getMessage());
+            e.printStackTrace();
+        }
+        return callbackData;
+    }
+
+    private String generateMonthlyIncomeReport() {
+        return reportService.generateMonthlyIncomeReport();
+    }
+
+
+    private void processCallbackQuery(CallbackQuery callbackQuery) {
+        String callbackData = callbackQuery.getData();
+        String chatId = callbackQuery.getMessage().getChatId().toString();
+
+        if ("recursive_call".equals(callbackData)) {
+            System.out.println("Recursive call detected. Ignoring...");
+            return;
+        }
+
+        System.out.println("Processing callback data: " + callbackData);
+    }
+    private void answerCallbackQuery(Update update) {
+        String callbackQueryId = update.getCallbackQuery().getId();
+        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+        answerCallbackQuery.setCallbackQueryId(callbackQueryId);
+        try {
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            log.error("Callback query-ni tasdiqlashda xatolik: {}", e.getMessage());
+        }
+    }
+
+    private final Set<String> processedQueries = Collections.synchronizedSet(new HashSet<>());
+
+    private boolean isAlreadyProcessed(String callbackQueryId) {
+        return !processedQueries.add(callbackQueryId);
+    }
+    public void sendExcelReport(Long chatId, String filePath) {
+        try {
+            SendDocument sendDocument = new SendDocument();
+            sendDocument.setChatId(chatId.toString());
+            sendDocument.setDocument(new InputFile(new File(filePath)));
+
+            execute(sendDocument);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Faylni yuborishda xatolik yuz berdi: " + e.getMessage(), e);
+        }
+    }
+
 
     @Override
-    public void setWebhook(SetWebhook setWebhook) throws TelegramApiException {
+    public void setWebhook(SetWebhook setWebhook)  {
         setWebhook.setUrl(webhookPath);
         log.info("Webhook o'rnatildi: {}", webhookPath);
     }
 
     private SendMessage handleRegisterCommand(Long chatId) throws TelegramApiException {
-        if (!userService.isUserRegistered(chatId)) {
+        if (userService.isUserRegistered(chatId)) {
             return handleAlreadyRegisteredMessage(chatId);
         }
 
@@ -218,7 +299,6 @@ public class TelegramService extends SpringWebhookBot {
     }
 
 
-
     private boolean isValidEmail(String email) {
         return email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
     }
@@ -238,7 +318,6 @@ public class TelegramService extends SpringWebhookBot {
 
     private SendMessage handleSettingsCommand(Long chatId) throws TelegramApiException {
         return telegramMessageHandler.handleSettingsCommand(chatId);
-
     }
 
     private SendMessage handleReportsCommand(Long chatId) throws TelegramApiException {
@@ -247,5 +326,9 @@ public class TelegramService extends SpringWebhookBot {
 
     public SendMessage sendMessage(Long chatId, String text) throws TelegramApiException {
         return telegramBotProvider.sendMessageExecute(chatId, text);
+    }
+
+    private void sendAdditionalFilters(Long chatId) throws TelegramApiException {
+        execute(telegramMessageHandler.createFilterKeyboard(chatId));
     }
 }

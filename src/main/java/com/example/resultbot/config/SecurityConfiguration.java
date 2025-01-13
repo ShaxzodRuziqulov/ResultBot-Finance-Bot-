@@ -68,10 +68,4 @@ public class SecurityConfiguration {
         return source;
     }
 
-
-//    @Bean
-//    public OidcUserService oidcUserService() {
-//        return new OidcUserService();
-//    }
-
 }

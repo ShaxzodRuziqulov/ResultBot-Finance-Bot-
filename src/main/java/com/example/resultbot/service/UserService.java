@@ -68,7 +68,7 @@ public class UserService {
     }
 
     public boolean isUserRegistered(Long chatId) {
-        return userRepository.findByChatId(chatId).isEmpty();
+        return userRepository.findByChatId(chatId).isPresent();
     }
     public boolean isUserRegistered(String email) {
         return userRepository.existsByEmail(email);

@@ -6,37 +6,48 @@ import com.example.resultbot.entity.enumirated.TransactionStatus;
 import com.example.resultbot.entity.enumirated.TransactionType;
 import com.example.resultbot.entity.teamplated.BaseEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 
 @Entity(name = "transaction")
-public class Transaction extends BaseEntity {
+public class Transaction extends BaseEntity{
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Transaction type cannot be null")
     private TransactionType type;
 
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Currency type cannot be null")
     private CurrencyType currency;
 
+    @NotNull(message = "Amount cannot be null")
+    @Positive(message = "Amount must be greater than zero")
     private Double amount;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private ExpenseCategory expenseCategory;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Client client;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // Lazy loading qo‘shildi
     private ServiceType serviceType;
 
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Transaction status cannot be null")
     private TransactionStatus transactionStatus;
+
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Status cannot be null")
     private Status status;
+
+    @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
 
-    private String filePath;
+    private String filePath; // Fayl yo‘li uchun maydon
 
     public Long getId() {
         return id;
