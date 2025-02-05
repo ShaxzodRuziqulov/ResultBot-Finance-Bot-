@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -83,93 +84,163 @@ public class TelegramService extends SpringWebhookBot {
     }
 
     @Override
+    public void setWebhook(SetWebhook setWebhook) {
+        setWebhook.setUrl(webhookPath);
+        log.info("Webhook o'rnatildi: {}", webhookPath);
+    }
+
+    @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            Long chatId = update.getMessage().getChatId();
-            String messageText = update.getMessage().getText().trim();
-
-            try {
-                SendMessage response;
-                if (messageText.startsWith("/verify")) {
-                    response = handleVerificationCommand(chatId, messageText);
-                } else {
-                    response = switch (messageText.toLowerCase()) {
-                        case "/start" -> handleStartCommand(chatId);
-                        case "/register" -> handleRegisterCommand(chatId);
-                        case "📊 hisobotlar" -> handleReportsCommand(chatId);
-                        case "⚙️ sozlamalar va kirish huquqlari" -> handleSettingsCommand(chatId);
-                        default -> handleUserState(chatId, messageText, update.getMessage());
-                    };
-                }
-
-                execute(response);
-                return response;
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                log.error("Javob yuborishda xatolik yuz berdi: {}", e.getMessage());
+        try {
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                return handleTextMessage(update);
             }
-        }
 
-        if (update.hasCallbackQuery()) {
-            String callbackData = update.getCallbackQuery().getData();
-            Long chatId = update.getCallbackQuery().getMessage().getChatId();
-
-            try {
-                String responseMessage = handleCallbackQuery(callbackData, chatId,update);
-                execute(sendMessage(chatId, responseMessage));
-            } catch (TelegramApiException e) {
-                log.error("Callback query-ni qayta ishlashda xatolik: {}", e.getMessage());
-                e.printStackTrace();
+            if (update.hasCallbackQuery()) {
+                return handleCallback(update);
             }
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
         }
-
-
         return null;
     }
 
-    private String handleCallbackQuery(String callbackData, Long chatId,Update update) throws TelegramApiException {
+    private BotApiMethod<?> handleTextMessage(Update update) {
+        Long chatId = update.getMessage().getChatId();
+        String messageText = update.getMessage().getText().trim();
 
         try {
-            String callbackQueryId = update.getCallbackQuery().getId();
-            System.out.println("CallbackQuery received: " + callbackData);
+            SendMessage response = processCommand(chatId, messageText, update.getMessage());
+            execute(response);
+            return response;
+        } catch (TelegramApiException e) {
+            log.error("Error sending response: {}", e.getMessage(), e);
+        }
+        return null;
+    }
 
-            if ("stop_recursion".equals(callbackData)) {
-                return null;
+    private SendMessage processCommand(Long chatId, String messageText, Message message) throws TelegramApiException {
+        if (messageText.startsWith("/verify")) {
+            return handleVerificationCommand(chatId, messageText);
+        }
+
+        return switch (messageText.toLowerCase()) {
+            case "/start" -> handleStartCommand(chatId);
+            case "/register" -> handleRegisterCommand(chatId);
+            case "\uD83D\uDCCA hisobotlar" -> handleReportsCommand(chatId);
+            case "\u2699\uFE0F sozlamalar va kirish huquqlari" -> handleSettingsCommand(chatId);
+            default -> handleUserState(chatId, messageText, message);
+        };
+    }
+
+    private BotApiMethod<?> handleCallback(Update update) throws TelegramApiException {
+        CallbackQuery callbackQuery = update.getCallbackQuery();
+        if (callbackQuery == null) {
+            log.warn("CallbackQuery null bo‘lishi mumkin, qaytmoqda...");
+            return null;
+        }
+
+        String callbackData = callbackQuery.getData();
+        Long chatId = callbackQuery.getMessage().getChatId();
+        Integer messageId = callbackQuery.getMessage().getMessageId();
+        String callbackQueryId = callbackQuery.getId();
+
+        log.info("Callback query received: chatId={}, data={}", chatId, callbackData);
+
+        callBackQuery(callbackQueryId);
+
+        reports(callbackData, chatId);
+
+        editMessage(chatId, messageId, callbackQuery);
+
+        return new SendMessage(chatId.toString(), "✅ Amal bajarildi."); // Webhook uchun 200 OK qaytarish
+    }
+
+    private void callBackQuery(String callbackQueryId) {
+        if (callbackQueryId != null) {
+            try {
+                answerCallbackQuery(callbackQueryId);
+                log.info("Callback query answered successfully.");
+            } catch (TelegramApiException e) {
+                log.error("AnswerCallbackQuery yuborishda xatolik: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void reports(String callbackData, Long chatId) throws TelegramApiException {
+        if ("REPORTS_MONTHLY_INCOME".equals(callbackData)) {
+            log.info("Oylik daromadlar faylini jo‘natish boshlanmoqda...");
+            execute(sendMessage(chatId, "Oylik daromadlar fayli tayyorlanmoqda..."));
+
+            String filePath = generateMonthlyIncomeReport();
+            if (filePath == null || filePath.isEmpty()) {
+                execute(sendMessage(chatId, "Faylni yaratishda xatolik yuz berdi."));
+                return; // Fayl yo‘q bo‘lsa, davom etmaymiz
             }
 
+            sendExcelReport(chatId, filePath);
+        } else {
+            log.info("Boshqa callback ma’lumot kelib tushdi: {}", callbackData);
+            processCallbackData(callbackData, chatId);
+        }
+    }
 
-            processCallbackQuery(update.getCallbackQuery());
-            answerCallbackQuery(update);
+    private void editMessage(Long chatId, Integer messageId, CallbackQuery callbackQuery) {
+        if (callbackQuery == null || callbackQuery.getMessage() == null || callbackQuery.getMessage().getReplyMarkup() == null) {
+            log.warn("Inline tugma allaqachon o‘chirib bo‘lingan yoki mavjud emas.");
+            return;
+        }
 
+        try {
+            EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
+            editMarkup.setChatId(chatId);
+            editMarkup.setMessageId(messageId);
+            editMarkup.setReplyMarkup(null);
+
+            execute(editMarkup);
+            log.info("Inline tugma o‘chirildi.");
+        } catch (TelegramApiException e) {
+            log.warn("Xabarni tahrirlashda xatolik: {}", e.getMessage());
+        }
+    }
+
+    private void answerCallbackQuery(String callbackQueryId) throws TelegramApiException {
+        AnswerCallbackQuery answer = new AnswerCallbackQuery();
+        answer.setCallbackQueryId(callbackQueryId);
+        answer.setText("Amal bajarilmoqda...");
+        answer.setShowAlert(false);
+        execute(answer);
+    }
+
+    private void processCallbackData(String callbackData, Long chatId) throws TelegramApiException {
+        try {
             CallbackActions action = CallbackActions.valueOf(callbackData.toUpperCase());
-
             switch (action) {
-                case REPORTS_MONTHLY_INCOME -> {
-                    execute(sendMessage(chatId, "Oylik daromadlar hisoblanmoqda..."));
-
-                    String filePath = generateMonthlyIncomeReport();
-
-                    sendExcelReport(chatId, filePath);
-                }
+                case REPORTS_MONTHLY_INCOME -> handleMonthlyIncomeReport(chatId);
                 case REPORTS_MONTHLY_EXPENSE -> execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
-                case REPORTS_ADDITIONAL -> {
-                    execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
-                    sendAdditionalFilters(chatId);
-                }
+                case REPORTS_ADDITIONAL -> handleAdditionalReports(chatId);
                 case SETTINGS_EDIT_PROFILE -> execute(sendMessage(chatId, "Profil ma’lumotlarini o‘zgartirish..."));
                 case SETTINGS_VIEW_ACCESS -> execute(sendMessage(chatId, "Joriy kirish huquqlarini ko‘rish..."));
                 case SETTINGS_CHANGE_PASSWORD -> execute(sendMessage(chatId, "Parolni o‘zgartirish..."));
                 default -> execute(sendMessage(chatId, "Tanlangan amalni tushunmadim."));
             }
         } catch (IllegalArgumentException e) {
-            log.error("Noto'g'ri callback ma'lumotlari: {}", callbackData);
+            log.error("Invalid callback data: {}", callbackData, e);
             execute(sendMessage(chatId, "Tanlangan amalni tushunmadim."));
         } catch (TelegramApiException e) {
-            log.error("Callback query qayta ishlashda xatolik: {}", e.getMessage());
-            e.printStackTrace();
+            log.error("Error processing callback query: {}", e.getMessage(), e);
         }
-        return callbackData;
+    }
+
+    private void handleMonthlyIncomeReport(Long chatId) throws TelegramApiException {
+        execute(sendMessage(chatId, "Oylik daromadlar hisoblanmoqda..."));
+        String filePath = generateMonthlyIncomeReport();
+        sendExcelReport(chatId, filePath);
+    }
+
+    private void handleAdditionalReports(Long chatId) throws TelegramApiException {
+        execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
+        sendAdditionalFilters(chatId);
     }
 
     private String generateMonthlyIncomeReport() {
@@ -177,51 +248,18 @@ public class TelegramService extends SpringWebhookBot {
     }
 
 
-    private void processCallbackQuery(CallbackQuery callbackQuery) {
-        String callbackData = callbackQuery.getData();
-        String chatId = callbackQuery.getMessage().getChatId().toString();
-
-        if ("recursive_call".equals(callbackData)) {
-            System.out.println("Recursive call detected. Ignoring...");
-            return;
-        }
-
-        System.out.println("Processing callback data: " + callbackData);
-    }
-    private void answerCallbackQuery(Update update) {
-        String callbackQueryId = update.getCallbackQuery().getId();
-        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
-        answerCallbackQuery.setCallbackQueryId(callbackQueryId);
-        try {
-            execute(answerCallbackQuery);
-        } catch (TelegramApiException e) {
-            log.error("Callback query-ni tasdiqlashda xatolik: {}", e.getMessage());
-        }
-    }
-
-    private final Set<String> processedQueries = Collections.synchronizedSet(new HashSet<>());
-
-    private boolean isAlreadyProcessed(String callbackQueryId) {
-        return !processedQueries.add(callbackQueryId);
-    }
-    public void sendExcelReport(Long chatId, String filePath) {
+    private void sendExcelReport(Long chatId, String filePath) {
         try {
             SendDocument sendDocument = new SendDocument();
             sendDocument.setChatId(chatId.toString());
             sendDocument.setDocument(new InputFile(new File(filePath)));
+            sendDocument.setCaption("Oylik daromadlar hisobot fayli");
 
             execute(sendDocument);
+            log.info("Fayl muvaffaqiyatli jo‘natildi: {}", filePath);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Faylni yuborishda xatolik yuz berdi: " + e.getMessage(), e);
+            log.error("Faylni jo‘natishda xatolik: {}", e.getMessage(), e);
         }
-    }
-
-
-    @Override
-    public void setWebhook(SetWebhook setWebhook)  {
-        setWebhook.setUrl(webhookPath);
-        log.info("Webhook o'rnatildi: {}", webhookPath);
     }
 
     private SendMessage handleRegisterCommand(Long chatId) throws TelegramApiException {
