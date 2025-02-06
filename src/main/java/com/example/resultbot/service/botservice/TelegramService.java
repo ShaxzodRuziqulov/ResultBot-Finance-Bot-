@@ -26,6 +26,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.starter.SpringWebhookBot;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -128,7 +129,7 @@ public class TelegramService extends SpringWebhookBot {
             case "/start" -> handleStartCommand(chatId);
             case "/register" -> handleRegisterCommand(chatId);
             case "\uD83D\uDCCA hisobotlar" -> handleReportsCommand(chatId);
-            case "\u2699\uFE0F sozlamalar va kirish huquqlari" -> handleSettingsCommand(chatId);
+            case "⚙️ sozlamalar va kirish huquqlari" -> handleSettingsCommand(chatId);
             default -> handleUserState(chatId, messageText, message);
         };
     }
@@ -142,7 +143,6 @@ public class TelegramService extends SpringWebhookBot {
 
         String callbackData = callbackQuery.getData();
         Long chatId = callbackQuery.getMessage().getChatId();
-        Integer messageId = callbackQuery.getMessage().getMessageId();
         String callbackQueryId = callbackQuery.getId();
 
         log.info("Callback query received: chatId={}, data={}", chatId, callbackData);
@@ -151,9 +151,7 @@ public class TelegramService extends SpringWebhookBot {
 
         reports(callbackData, chatId);
 
-        editMessage(chatId, messageId, callbackQuery);
-
-        return new SendMessage(chatId.toString(), "✅ Amal bajarildi."); // Webhook uchun 200 OK qaytarish
+        return new SendMessage(chatId.toString(), "✅ Amal bajarildi.");
     }
 
     private void callBackQuery(String callbackQueryId) {
@@ -175,7 +173,7 @@ public class TelegramService extends SpringWebhookBot {
             String filePath = generateMonthlyIncomeReport();
             if (filePath == null || filePath.isEmpty()) {
                 execute(sendMessage(chatId, "Faylni yaratishda xatolik yuz berdi."));
-                return; // Fayl yo‘q bo‘lsa, davom etmaymiz
+                return;
             }
 
             sendExcelReport(chatId, filePath);
@@ -217,7 +215,11 @@ public class TelegramService extends SpringWebhookBot {
             CallbackActions action = CallbackActions.valueOf(callbackData.toUpperCase());
             switch (action) {
                 case REPORTS_MONTHLY_INCOME -> handleMonthlyIncomeReport(chatId);
-                case REPORTS_MONTHLY_EXPENSE -> execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
+                case REPORTS_MONTHLY_EXPENSE -> {
+                    int month = LocalDate.now().getMonthValue();
+                    int year = LocalDate.now().getYear();
+                    handleMonthlyExpenseReport(chatId, month, year);
+                }
                 case REPORTS_ADDITIONAL -> handleAdditionalReports(chatId);
                 case SETTINGS_EDIT_PROFILE -> execute(sendMessage(chatId, "Profil ma’lumotlarini o‘zgartirish..."));
                 case SETTINGS_VIEW_ACCESS -> execute(sendMessage(chatId, "Joriy kirish huquqlarini ko‘rish..."));
@@ -238,6 +240,13 @@ public class TelegramService extends SpringWebhookBot {
         sendExcelReport(chatId, filePath);
     }
 
+    private void handleMonthlyExpenseReport(Long chatId, int month, int year) throws TelegramApiException {
+        execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
+        String filePath = generateMonthlyExpenseReport(month, year);
+        sendExcelReport(chatId, filePath);
+//        new File(filePath).delete();
+    }
+
     private void handleAdditionalReports(Long chatId) throws TelegramApiException {
         execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
         sendAdditionalFilters(chatId);
@@ -247,6 +256,9 @@ public class TelegramService extends SpringWebhookBot {
         return reportService.generateMonthlyIncomeReport();
     }
 
+    private String generateMonthlyExpenseReport(int month, int year) {
+        return reportService.generateMonthlyExpenseReport(month, year);
+    }
 
     private void sendExcelReport(Long chatId, String filePath) {
         try {
@@ -261,6 +273,7 @@ public class TelegramService extends SpringWebhookBot {
             log.error("Faylni jo‘natishda xatolik: {}", e.getMessage(), e);
         }
     }
+
 
     private SendMessage handleRegisterCommand(Long chatId) throws TelegramApiException {
         if (userService.isUserRegistered(chatId)) {
@@ -338,7 +351,7 @@ public class TelegramService extends SpringWebhookBot {
 
 
     private boolean isValidEmail(String email) {
-        return email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
+        return email.matches("^[\\w-.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
     }
 
     public SendMessage handleUnknownCommand(Long chatId) throws TelegramApiException {

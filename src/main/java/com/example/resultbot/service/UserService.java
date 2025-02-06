@@ -73,41 +73,6 @@ public class UserService {
     public boolean isUserRegistered(String email) {
         return userRepository.existsByEmail(email);
     }
-    private final Map<Long, Set<String>> userProcessedCallbacks = new HashMap<>();
 
-    /**
-     * Foydalanuvchi allaqachon bu callback ma'lumotini qayta ishlaganligini tekshirish.
-     *
-     * @param chatId      Foydalanuvchi chat ID si
-     * @param callbackData Callback ma'lumoti
-     * @return true - agar foydalanuvchi allaqachon bu amalni bajargan bo'lsa, aks holda false
-     */
-    public boolean hasUserProcessedCallback(Long chatId, String callbackData) {
-        return userProcessedCallbacks.containsKey(chatId) &&
-                userProcessedCallbacks.get(chatId).contains(callbackData);
-    }
-
-    /**
-     * Foydalanuvchini bu callback ma'lumotini qayta ishlaganligi sifatida belgilash.
-     *
-     * @param chatId      Foydalanuvchi chat ID si
-     * @param callbackData Callback ma'lumoti
-     */
-    public void markUserAsProcessedCallback(Long chatId, String callbackData) {
-        userProcessedCallbacks.computeIfAbsent(chatId, k -> new HashSet<>()).add(callbackData);
-    }
-
-    /**
-     * Foydalanuvchini bu callback ma'lumotini qayta ishlamaganligi sifatida belgilash.
-     * (Agar kerak bo'lsa, masalan, foydalanuvchi yangi amalni boshlaganda)
-     *
-     * @param chatId      Foydalanuvchi chat ID si
-     * @param callbackData Callback ma'lumoti
-     */
-    public void markUserAsNotProcessedCallback(Long chatId, String callbackData) {
-        if (userProcessedCallbacks.containsKey(chatId)) {
-            userProcessedCallbacks.get(chatId).remove(callbackData);
-        }
-    }
 
 }
