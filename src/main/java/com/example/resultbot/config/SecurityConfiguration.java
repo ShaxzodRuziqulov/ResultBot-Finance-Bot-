@@ -43,6 +43,7 @@ public class SecurityConfiguration {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/auth/**", "/me", "/login").permitAll()
                         .requestMatchers("/telegram/webhook").permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(Customizer.withDefaults())
