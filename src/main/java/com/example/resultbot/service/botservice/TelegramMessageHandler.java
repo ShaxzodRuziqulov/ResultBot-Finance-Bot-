@@ -50,13 +50,11 @@ public class TelegramMessageHandler {
         InlineKeyboardMarkup settingsMenu = inlineKeyboardMarkupService.createSettingsMenu();
         return sendMessageWithKeyboard(chatId, message, settingsMenu);
     }
-
-    public SendMessage createFilterKeyboard(Long chatId) throws TelegramApiException {
-        String text = " ";
-        InlineKeyboardMarkup filter = inlineKeyboardMarkupService.createFilterKeyboard();
-        return sendMessageWithKeyboard(chatId, text, filter);
+    public void filter(Long chatId) throws TelegramApiException {
+        String message = "Qaysi davr turini tanlaysiz?";
+        InlineKeyboardMarkup reportsMenu = inlineKeyboardMarkupService.getReportDateSelectionKeyboard(message);
+        sendMessageWithKeyboard(chatId, message, reportsMenu);
     }
-
     private SendMessage sendMessage(Long chatId, String text) {
         return telegramBotProvider.sendMessageExecute(chatId, text);
     }

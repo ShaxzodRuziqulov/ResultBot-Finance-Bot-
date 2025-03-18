@@ -7,6 +7,7 @@ import com.example.resultbot.service.dto.TransactionDto;
 import com.example.resultbot.service.mapper.TransactionMapper;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 

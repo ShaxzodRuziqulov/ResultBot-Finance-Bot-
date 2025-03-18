@@ -17,7 +17,6 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -169,8 +168,9 @@ public class TelegramService extends SpringWebhookBot {
         if ("REPORTS_MONTHLY_INCOME".equals(callbackData)) {
             log.info("Oylik daromadlar faylini jo‘natish boshlanmoqda...");
             execute(sendMessage(chatId, "Oylik daromadlar fayli tayyorlanmoqda..."));
-
-            String filePath = generateMonthlyIncomeReport();
+            int month = LocalDate.now().getMonthValue();
+            int year = LocalDate.now().getYear();
+            String filePath = generateMonthlyIncomeReport(month, year);
             if (filePath == null || filePath.isEmpty()) {
                 execute(sendMessage(chatId, "Faylni yaratishda xatolik yuz berdi."));
                 return;
@@ -183,24 +183,6 @@ public class TelegramService extends SpringWebhookBot {
         }
     }
 
-    private void editMessage(Long chatId, Integer messageId, CallbackQuery callbackQuery) {
-        if (callbackQuery == null || callbackQuery.getMessage() == null || callbackQuery.getMessage().getReplyMarkup() == null) {
-            log.warn("Inline tugma allaqachon o‘chirib bo‘lingan yoki mavjud emas.");
-            return;
-        }
-
-        try {
-            EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
-            editMarkup.setChatId(chatId);
-            editMarkup.setMessageId(messageId);
-            editMarkup.setReplyMarkup(null);
-
-            execute(editMarkup);
-            log.info("Inline tugma o‘chirildi.");
-        } catch (TelegramApiException e) {
-            log.warn("Xabarni tahrirlashda xatolik: {}", e.getMessage());
-        }
-    }
 
     private void answerCallbackQuery(String callbackQueryId) throws TelegramApiException {
         AnswerCallbackQuery answer = new AnswerCallbackQuery();
@@ -212,9 +194,18 @@ public class TelegramService extends SpringWebhookBot {
 
     private void processCallbackData(String callbackData, Long chatId) throws TelegramApiException {
         try {
+//            if (callbackData.startsWith("REPORT_PERIOD_")) {
+//                processReportPeriodSelection(callbackData, chatId);
+//                return;
+//            }
+
             CallbackActions action = CallbackActions.valueOf(callbackData.toUpperCase());
             switch (action) {
-                case REPORTS_MONTHLY_INCOME -> handleMonthlyIncomeReport(chatId);
+                case REPORTS_MONTHLY_INCOME -> {
+                    int month = LocalDate.now().getMonthValue();
+                    int year = LocalDate.now().getYear();
+                    handleMonthlyIncomeReport(chatId, month, year);
+                }
                 case REPORTS_MONTHLY_EXPENSE -> {
                     int month = LocalDate.now().getMonthValue();
                     int year = LocalDate.now().getYear();
@@ -234,9 +225,58 @@ public class TelegramService extends SpringWebhookBot {
         }
     }
 
-    private void handleMonthlyIncomeReport(Long chatId) throws TelegramApiException {
+//    private void processReportPeriodSelection(String callbackData, Long chatId) throws TelegramApiException {
+//        log.info("Foydalanuvchi hisobot davrini tanladi: {}", callbackData);
+//
+//        String[] parts = callbackData.split("_");
+//        if (parts.length < 4) {
+//            execute(sendMessage(chatId, "Noto‘g‘ri formatdagi hisobot davri."));
+//            return;
+//        }
+//
+//        String period = parts[2] + "_" + parts[3]; // Masalan, "LAST_1_MONTH"
+//        String reportType = parts[4]; // REPORTS_MONTHLY_INCOME yoki REPORTS_MONTHLY_EXPENSE
+//
+//        int startDate = calculateStartDate(period);
+//        LocalDate endDate = LocalDate.now();
+//
+//        String filePath;
+//        switch (reportType) {
+//            case "REPORTS_MONTHLY_INCOME" -> {
+//                execute(sendMessage(chatId, "Oylik daromadlar hisobotini yaratish jarayoni boshlandi..."));
+//                filePath = generateMonthlyIncomeReport(startDate, endDate);
+//                sendExcelReport(chatId, filePath);
+//            }
+//            case "REPORTS_MONTHLY_EXPENSE" -> {
+//                execute(sendMessage(chatId, "Oylik xarajatlar hisobotini yaratish jarayoni boshlandi..."));
+//                filePath = generateMonthlyExpenseReport(startDate, endDate);
+//                sendExcelReport(chatId, filePath);
+//            }
+//            default -> execute(sendMessage(chatId, "Noto‘g‘ri hisobot turi."));
+//        }
+//    }
+
+
+    private LocalDate calculateStartDate(String period) {
+        return switch (period) {
+            case "LAST_1_MONTH" -> LocalDate.now().minusMonths(1);
+            case "LAST_3_MONTHS" -> LocalDate.now().minusMonths(3);
+            case "LAST_1_YEAR" -> LocalDate.now().minusYears(1);
+            case "TILL_TODAY" -> LocalDate.of(2000, 1, 1); // Juda eski tarixdan boshlash mumkin
+            default -> LocalDate.now(); // Standart holat
+        };
+    }
+
+
+    private void filterTimeReport(Long chatId) throws TelegramApiException {
+        execute(sendMessage(chatId, "Kerakli davrni tanlang ..."));
+        handleFilterCommand(chatId);
+    }
+
+    private void handleMonthlyIncomeReport(Long chatId, int month, int year) throws TelegramApiException {
+        handleFilterCommand(chatId);
         execute(sendMessage(chatId, "Oylik daromadlar hisoblanmoqda..."));
-        String filePath = generateMonthlyIncomeReport();
+        String filePath = generateMonthlyIncomeReport(month, year);
         sendExcelReport(chatId, filePath);
     }
 
@@ -244,16 +284,14 @@ public class TelegramService extends SpringWebhookBot {
         execute(sendMessage(chatId, "Oylik xarajatlar hisoblanmoqda..."));
         String filePath = generateMonthlyExpenseReport(month, year);
         sendExcelReport(chatId, filePath);
-//        new File(filePath).delete();
     }
 
     private void handleAdditionalReports(Long chatId) throws TelegramApiException {
         execute(sendMessage(chatId, "Qo‘shimcha hisobot turlari tanlanmoqda..."));
-        sendAdditionalFilters(chatId);
     }
 
-    private String generateMonthlyIncomeReport() {
-        return reportService.generateMonthlyIncomeReport();
+    private String generateMonthlyIncomeReport(int startDate, int endDate) {
+        return reportService.generateMonthlyIncomeReport(startDate, endDate);
     }
 
     private String generateMonthlyExpenseReport(int month, int year) {
@@ -265,7 +303,7 @@ public class TelegramService extends SpringWebhookBot {
             SendDocument sendDocument = new SendDocument();
             sendDocument.setChatId(chatId.toString());
             sendDocument.setDocument(new InputFile(new File(filePath)));
-            sendDocument.setCaption("Oylik daromadlar hisobot fayli");
+            sendDocument.setCaption("Siz suragan hisobot fayli");
 
             execute(sendDocument);
             log.info("Fayl muvaffaqiyatli jo‘natildi: {}", filePath);
@@ -371,15 +409,15 @@ public class TelegramService extends SpringWebhookBot {
         return telegramMessageHandler.handleSettingsCommand(chatId);
     }
 
+    private void handleFilterCommand(Long chatId) throws TelegramApiException {
+        telegramMessageHandler.filter(chatId);
+    }
+
     private SendMessage handleReportsCommand(Long chatId) throws TelegramApiException {
         return telegramMessageHandler.handleReportsCommand(chatId);
     }
 
     public SendMessage sendMessage(Long chatId, String text) throws TelegramApiException {
         return telegramBotProvider.sendMessageExecute(chatId, text);
-    }
-
-    private void sendAdditionalFilters(Long chatId) throws TelegramApiException {
-        execute(telegramMessageHandler.createFilterKeyboard(chatId));
     }
 }

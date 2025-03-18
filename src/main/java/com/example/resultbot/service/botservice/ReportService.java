@@ -24,7 +24,7 @@ public class ReportService {
         this.transactionService = transactionService;
     }
 
-    public String generateMonthlyIncomeReport() {
+    public String generateMonthlyIncomeReport(int currentMonth,int currentYear) {
         String filePath = "monthly_income_report.xlsx";
 
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -39,19 +39,16 @@ public class ReportService {
             headerRow.createCell(4).setCellValue("Kategoriyasi");
 
 
-            LocalDate today = LocalDate.now();
-            int currentMonth = today.getMonthValue();
-            int currentYear = today.getYear();
-
             List<Transaction> transactions = transactionService.fetchMonthlyTransactions(currentMonth, currentYear);
 
             int rowNum = 1;
             for (Transaction transaction : transactions) {
                 Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(transaction.getId());
+                row.createCell(0).setCellValue(transaction.getCreatedAt().toString());
                 row.createCell(1).setCellValue(transaction.getClient().getFullName());
                 row.createCell(2).setCellValue(transaction.getAmount());
                 row.createCell(3).setCellValue(transaction.getCurrency().toString());
+                row.createCell(4).setCellValue(transaction.getExpenseCategory().getName());
 
             }
 

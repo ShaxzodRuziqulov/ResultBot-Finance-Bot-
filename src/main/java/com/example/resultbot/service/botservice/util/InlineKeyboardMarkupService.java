@@ -1,6 +1,5 @@
 package com.example.resultbot.service.botservice.util;
 
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -52,33 +51,25 @@ public class InlineKeyboardMarkupService {
     }
 
 
-    public InlineKeyboardMarkup createFilterKeyboard() {
-        InlineKeyboardButton dateFilter = new InlineKeyboardButton("📅 Davr bo‘yicha");
-        dateFilter.setCallbackData("FILTER_DATE");
+    public InlineKeyboardMarkup getReportDateSelectionKeyboard(String reportType) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-        InlineKeyboardButton categoryFilter = new InlineKeyboardButton("📂 Xarajat kategoriyasi");
-        categoryFilter.setCallbackData("FILTER_CATEGORY");
+        rows.add(List.of(createInlineButton("📅 Bugungacha", "REPORT_PERIOD_TILL_TODAY_" + reportType)));
+        rows.add(List.of(createInlineButton("📆 Oxirgi 1 oy", "REPORT_PERIOD_LAST_1_MONTH_" + reportType)));
+        rows.add(List.of(createInlineButton("📆 Oxirgi 3 oy", "REPORT_PERIOD_LAST_3_MONTHS_" + reportType)));
+        rows.add(List.of(createInlineButton("📆 Oxirgi 1 yil", "REPORT_PERIOD_LAST_1_YEAR_" + reportType)));
+        rows.add(List.of(createInlineButton("📅 Aniq sana", "REPORT_PERIOD_CUSTOM_DATE_" + reportType)));
 
-        InlineKeyboardButton customerFilter = new InlineKeyboardButton("👤 Mijoz bo‘yicha");
-        customerFilter.setCallbackData("FILTER_CUSTOMER");
-        InlineKeyboardButton periodFilter = new InlineKeyboardButton("Xizmat bo‘yicha");
-        periodFilter.setCallbackData("FILTER_BY_SERVICE");
-        return getInlineKeyboardMarkup(dateFilter, categoryFilter, customerFilter);
+        markup.setKeyboard(rows);
+        return markup;
     }
 
-    private InlineKeyboardMarkup getInlineKeyboardMarkup(
-            InlineKeyboardButton incomeButton,
-            InlineKeyboardButton expenseButton,
-            InlineKeyboardButton customReportButton) {
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        rows.add(List.of(incomeButton));
-        rows.add(List.of(expenseButton));
-        rows.add(List.of(customReportButton));
-
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        keyboardMarkup.setKeyboard(rows);
-
-        return keyboardMarkup;
+    private InlineKeyboardButton createInlineButton(String text, String callbackData) {
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText(text);
+        button.setCallbackData(callbackData);
+        return button;
     }
 
 
